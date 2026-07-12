@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FLUX Language Wiki</title>
+<style>
+  @page { margin: 2.2cm 1.8cm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #1f2430;
+    font-size: 10.5pt;
+    line-height: 1.55;
+  }
+  code, pre, .mono {
+    font-family: "Consolas", "Menlo", "Courier New", monospace;
+  }
+  h1, h2, h3, h4 { color: #1a1f36; font-weight: 700; }
+  h1 { font-size: 24pt; margin-bottom: 4px; }
+  h2 {
+    font-size: 15pt;
+    border-bottom: 2px solid #5b3ce0;
+    padding-bottom: 4px;
+    margin-top: 30px;
+  }
+  h3 { font-size: 12.5pt; color: #5b3ce0; margin-top: 20px; }
+  h4 { font-size: 11pt; margin-bottom: 4px; }
+  a { color: #5b3ce0; text-decoration: none; }
+  .tagline { color: #666; font-size: 11.5pt; margin-top: 0; }
+  .cover {
+    text-align: center;
+    padding-top: 22%;
+    page-break-after: always;
+  }
+  .cover .badge {
+    display: inline-block;
+    background: #5b3ce0;
+    color: #fff;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 10pt;
+    letter-spacing: 1px;
+    margin-bottom: 18px;
+  }
+  .cover h1 { font-size: 40pt; margin-bottom: 6px; }
+  .cover .sub { font-size: 13pt; color: #555; margin-top: 8px; }
+  .cover .meta { margin-top: 60px; font-size: 9.5pt; color: #888; }
+  .toc { page-break-after: always; }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li { padding: 5px 0; border-bottom: 1px dotted #ddd; }
+  .toc li a { color: #1f2430; font-weight: 600; }
+  .toc li.sub { padding-left: 22px; font-weight: 400; }
+  .toc li.sub a { color: #555; font-weight: 400; }
+  section { page-break-before: always; }
+  section:first-of-type { page-break-before: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 18px 0;
+    font-size: 9.5pt;
+  }
+  th {
+    background: #5b3ce0;
+    color: #fff;
+    text-align: left;
+    padding: 6px 8px;
+  }
+  td {
+    border: 1px solid #e2e2e8;
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f7f6fc; }
+  code {
+    background: #f0eefc;
+    color: #4a2ec9;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 92%;
+  }
+  pre {
+    background: #1e2130;
+    color: #e9e9f2;
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 9pt;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 10px 0 16px 0;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  .kw { color: #7dd3fc; }
+  .str { color: #a3e635; }
+  .cmt { color: #8b90a5; font-style: italic; }
+  .num { color: #fbbf24; }
+  .note {
+    background: #fff8e6;
+    border-left: 4px solid #e8b923;
+    padding: 8px 12px;
+    margin: 12px 0;
+    font-size: 9.5pt;
+  }
+  .tip {
+    background: #eafaf1;
+    border-left: 4px solid #22a55e;
+    padding: 8px 12px;
+    margin: 12px 0;
+    font-size: 9.5pt;
+  }
+  .errbox {
+    background: #fdecec;
+    border-left: 4px solid #d64545;
+    padding: 8px 12px;
+    margin: 12px 0;
+    font-size: 9.5pt;
+  }
+  .example-title {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 14px 0 -6px 0;
+  }
+  .grid2 { display: flex; gap: 16px; }
+  .grid2 > div { flex: 1; }
+  .small { font-size: 8.5pt; color: #777; }
+  footer.page-footer { font-size: 8pt; color: #999; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="badge">LANGUAGE REFERENCE</div>
+  <h1>FLUX</h1>
+  <div class="sub">Fast, Lightweight, Universal eXecution</div>
+  <p class="sub">A Python-flavored, dynamically typed scripting language</p>
+  <div class="meta">
+    Version 1.0.0 &nbsp;•&nbsp; Wiki-style Language Reference<br>
+    Covers the lexer, parser, interpreter, runtime errors, and the FXwindows GUI library
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+<h2 style="margin-top:0;">Contents</h2>
+<ul>
+  <li><a href="#overview">1. Overview</a></li>
+  <li><a href="#literals">2. Literals</a></li>
+  <li class="sub"><a href="#lit-string">2.1 Strings</a></li>
+  <li class="sub"><a href="#lit-number">2.2 Integers &amp; Floats</a></li>
+  <li class="sub"><a href="#lit-bool">2.3 Booleans &amp; None</a></li>
+  <li class="sub"><a href="#lit-collections">2.4 Arrays &amp; Dictionaries</a></li>
+  <li><a href="#keywords">3. Keywords</a></li>
+  <li><a href="#operators">4. Operators &amp; Signs</a></li>
+  <li class="sub"><a href="#op-arith">4.1 Arithmetic Operators</a></li>
+  <li class="sub"><a href="#op-compare">4.2 Comparison Operators</a></li>
+  <li class="sub"><a href="#op-logic">4.3 Logical Operators</a></li>
+  <li class="sub"><a href="#op-assign">4.4 Assignment &amp; Punctuation</a></li>
+  <li><a href="#control-flow">5. Statements &amp; Control Flow</a></li>
+  <li class="sub"><a href="#cf-if">5.1 IF / ELIF / ELSE</a></li>
+  <li class="sub"><a href="#cf-while">5.2 WHILE</a></li>
+  <li class="sub"><a href="#cf-for">5.3 FOR ... IN</a></li>
+  <li class="sub"><a href="#cf-def">5.4 DEF (Functions)</a></li>
+  <li class="sub"><a href="#cf-class">5.5 CLASS</a></li>
+  <li class="sub"><a href="#cf-try">5.6 TRY / EXCEPT / FINALLY</a></li>
+  <li class="sub"><a href="#cf-ask">5.7 ASK / ANSWER</a></li>
+  <li><a href="#errors">6. Errors</a></li>
+  <li class="sub"><a href="#err-lex">6.1 Lex Errors</a></li>
+  <li class="sub"><a href="#err-parse">6.2 Parse Errors</a></li>
+  <li class="sub"><a href="#err-runtime">6.3 Runtime Errors</a></li>
+  <li><a href="#fxwindows">7. FXwindows Library</a></li>
+  <li><a href="#examples">8. Full Examples</a></li>
+</ul>
+</div>
+
+<!-- OVERVIEW -->
+<section id="overview">
+<h2>1. Overview</h2>
+<p>
+FLUX is a small, dynamically-typed, interpreted language with Python-style
+significant-whitespace blocks but a keyword style closer to BASIC — most
+keywords are written in <code>UPPERCASE</code> (the lexer is
+case-insensitive, so <code>if</code>, <code>If</code>, and <code>IF</code>
+all work, but <code>IF</code> is the house style used throughout this
+document).
+</p>
+<p>Programs are plain text files with a <code>.fx</code> extension, run with:</p>
+<pre>fx run myprogram.fx</pre>
+<p>
+A FLUX program is a sequence of statements. Blocks (the bodies of
+<code>IF</code>, <code>WHILE</code>, <code>FOR</code>, <code>DEF</code>,
+<code>CLASS</code>, <code>TRY</code>, <code>EXCEPT</code>, and
+<code>FINALLY</code>) are introduced with a trailing <code>:</code>,
+followed by a newline, followed by one indentation level (spaces or tabs —
+a tab counts as 4 spaces). A block ends when the indentation returns to a
+shallower level, exactly like Python.
+</p>
+<div class="example-title">Example</div>
+<pre><span class="kw">IF</span> <span class="num">1</span> &lt; <span class="num">2</span>:
+    <span class="kw">PRINT</span> <span class="str">"indented block"</span>
+<span class="kw">PRINT</span> <span class="str">"back to top level"</span></pre>
+</section>
+
+<!-- LITERALS -->
+<section id="literals">
+<h2>2. Literals</h2>
+
+<h3 id="lit-string">2.1 Strings</h3>
+<p>
+Strings are delimited by matching single or double quotes and support the
+usual backslash escapes: <code>\n</code>, <code>\t</code>, <code>\r</code>,
+<code>\\</code>, <code>\"</code>, <code>\'</code>.
+</p>
+<pre><span class="kw">PRINT</span> <span class="str">"Hello, World!"</span>
+<span class="kw">PRINT</span> <span class="str">'Line one\nLine two'</span></pre>
+<table>
+<tr><th>Form</th><th>Example</th><th>Notes</th></tr>
+<tr><td>Double-quoted</td><td><code>"hello"</code></td><td>Most common style</td></tr>
+<tr><td>Single-quoted</td><td><code>'hello'</code></td><td>Identical semantics to double-quoted</td></tr>
+<tr><td>Escape sequence</td><td><code>"a\tb"</code></td><td>Tab between <code>a</code> and <code>b</code></td></tr>
+</table>
+
+<h3 id="lit-number">2.2 Integers &amp; Floats</h3>
+<p>
+Integers are 64-bit signed whole numbers (<code>i64</code>). Floats are
+64-bit IEEE-754 (<code>f64</code>) and require a digit on both sides of the
+decimal point — <code>1.</code> or <code>.5</code> are <b>not</b> valid
+float literals; use <code>1.0</code> and <code>0.5</code>.
+</p>
+<pre>count = <span class="num">42</span>
+pi    = <span class="num">3.14159</span>
+neg   = -<span class="num">7</span></pre>
+
+<h3 id="lit-bool">2.3 Booleans &amp; None</h3>
+<table>
+<tr><th>Literal</th><th>Meaning</th></tr>
+<tr><td><code>TRUE</code></td><td>Boolean true</td></tr>
+<tr><td><code>FALSE</code></td><td>Boolean false</td></tr>
+<tr><td><code>NONE</code></td><td>The absence of a value (prints as <code>NONE</code>)</td></tr>
+</table>
+<div class="note">
+<b>Truthiness:</b> <code>NONE</code>, <code>FALSE</code>, the empty string
+<code>""</code>, an empty array <code>[]</code>, and an empty dictionary
+<code>{}</code> are all falsy. Every other value (including <code>0</code>)
+is truthy.
+</div>
+
+<h3 id="lit-collections">2.4 Arrays &amp; Dictionaries</h3>
+<pre>colors = [<span class="str">"red"</span>, <span class="str">"green"</span>, <span class="str">"blue"</span>]
+scores = {<span class="str">"alice"</span>: <span class="num">95</span>, <span class="str">"bob"</span>: <span class="num">87</span>}
+
+<span class="kw">PRINT</span> colors[<span class="num">0</span>]        <span class="cmt"># "red"</span>
+<span class="kw">PRINT</span> scores[<span class="str">"alice"</span>]  <span class="cmt"># 95</span></pre>
+</section>
+
+<!-- KEYWORDS -->
+<section id="keywords">
+<h2>3. Keywords</h2>
+<p>
+Keywords are reserved words the lexer recognizes case-insensitively; they
+cannot be used as variable, function, or class names.
+</p>
+<table>
+<tr><th>Keyword</th><th>Category</th><th>Purpose</th></tr>
+<tr><td><code>PRINT</code></td><td>I/O</td><td>Writes a value (followed by a newline) to standard output</td></tr>
+<tr><td><code>ASK</code></td><td>I/O</td><td>Prompts for input and stores it in the implicit <code>ANSWER</code> variable</td></tr>
+<tr><td><code>DEF</code></td><td>Function</td><td>Defines a function or a class method</td></tr>
+<tr><td><code>RETURN</code></td><td>Function</td><td>Returns a value from the current function (or <code>NONE</code> if bare)</td></tr>
+<tr><td><code>IF</code></td><td>Control flow</td><td>Starts a conditional block</td></tr>
+<tr><td><code>ELIF</code></td><td>Control flow</td><td>An additional condition after <code>IF</code></td></tr>
+<tr><td><code>ELSE</code></td><td>Control flow</td><td>The fallback branch of <code>IF</code>/<code>ELIF</code></td></tr>
+<tr><td><code>WHILE</code></td><td>Control flow</td><td>Loops while a condition is truthy</td></tr>
+<tr><td><code>FOR</code></td><td>Control flow</td><td>Iterates over an array (paired with <code>IN</code>)</td></tr>
+<tr><td><code>IN</code></td><td>Control flow</td><td>Separates the loop variable from the iterable in <code>FOR</code></td></tr>
+<tr><td><code>BREAK</code></td><td>Control flow</td><td>Exits the innermost <code>WHILE</code>/<code>FOR</code> loop</td></tr>
+<tr><td><code>CONTINUE</code></td><td>Control flow</td><td>Skips to the next iteration of the innermost loop</td></tr>
+<tr><td><code>PASS</code></td><td>Control flow</td><td>A no-op statement, useful as a placeholder</td></tr>
+<tr><td><code>CLASS</code></td><td>OOP</td><td>Defines a class</td></tr>
+<tr><td><code>INIT</code></td><td>OOP</td><td>The constructor method name inside a <code>CLASS</code> body</td></tr>
+<tr><td><code>SELF</code></td><td>OOP</td><td>Refers to the current instance inside a method</td></tr>
+<tr><td><code>TRY</code></td><td>Errors</td><td>Starts a block whose errors can be caught</td></tr>
+<tr><td><code>EXCEPT</code></td><td>Errors</td><td>Catches and handles an error raised in <code>TRY</code></td></tr>
+<tr><td><code>FINALLY</code></td><td>Errors</td><td>Runs unconditionally after <code>TRY</code>/<code>EXCEPT</code></td></tr>
+<tr><td><code>RAISE</code></td><td>Errors</td><td>Raises an exception with an optional message</td></tr>
+<tr><td><code>IMPORT</code></td><td>Modules</td><td>Imports a whole module (<code>math</code>, <code>io</code>, <code>sys</code>, <code>fxwindows</code>)</td></tr>
+<tr><td><code>FROM</code></td><td>Modules</td><td>Begins a <code>FROM ... IMPORT ...</code> statement</td></tr>
+<tr><td><code>AS</code></td><td>Modules</td><td>Aliases an import</td></tr>
+<tr><td><code>TRUE</code> / <code>FALSE</code></td><td>Literal</td><td>Boolean literals</td></tr>
+<tr><td><code>NONE</code></td><td>Literal</td><td>The null/none literal</td></tr>
+<tr><td><code>AND</code> / <code>OR</code> / <code>NOT</code></td><td>Logic</td><td>Boolean operators (word form, not symbols)</td></tr>
+<tr><td><code>RANGE</code></td><td>Builtin</td><td><code>RANGE(end)</code>, <code>RANGE(start, end)</code>, or <code>RANGE(start, end, step)</code></td></tr>
+<tr><td><code>TYPE</code></td><td>Builtin</td><td><code>TYPE(value)</code> returns the value's type name as a string</td></tr>
+<tr><td><code>ASYNC</code> / <code>AWAIT</code></td><td>Reserved</td><td>Reserved for future asynchronous support</td></tr>
+</table>
+</section>
+
+<!-- OPERATORS -->
+<section id="operators">
+<h2>4. Operators &amp; Signs</h2>
+
+<h3 id="op-arith">4.1 Arithmetic Operators</h3>
+<table>
+<tr><th>Sign</th><th>Name</th><th>Example</th><th>Result</th></tr>
+<tr><td><code>+</code></td><td>Add / concatenate</td><td><code>2 + 3</code></td><td><code>5</code></td></tr>
+<tr><td><code>+</code></td><td>String concatenation</td><td><code>"a" + "b"</code></td><td><code>"ab"</code></td></tr>
+<tr><td><code>-</code></td><td>Subtract</td><td><code>5 - 3</code></td><td><code>2</code></td></tr>
+<tr><td><code>-</code></td><td>Unary negation</td><td><code>-x</code></td><td>The negative of <code>x</code></td></tr>
+<tr><td><code>*</code></td><td>Multiply</td><td><code>4 * 3</code></td><td><code>12</code></td></tr>
+<tr><td><code>/</code></td><td>Division (always float)</td><td><code>7 / 2</code></td><td><code>3.5</code></td></tr>
+<tr><td><code>//</code></td><td>Floor division</td><td><code>7 // 2</code></td><td><code>3</code></td></tr>
+<tr><td><code>%</code></td><td>Modulo (remainder)</td><td><code>7 % 2</code></td><td><code>1</code></td></tr>
+<tr><td><code>**</code></td><td>Exponent (power)</td><td><code>2 ** 8</code></td><td><code>256.0</code></td></tr>
+</table>
+<div class="errbox">
+Dividing or taking the modulo of an integer by <code>0</code> with
+<code>//</code> or <code>%</code> raises a catchable runtime error
+(<code>ValueError: floor division by zero</code> / <code>modulo by zero</code>)
+rather than crashing. Plain <code>/</code> follows IEEE-754 float rules, so
+<code>1 / 0</code> evaluates to <code>inf</code> instead of raising.
+</div>
+
+<h3 id="op-compare">4.2 Comparison Operators</h3>
+<table>
+<tr><th>Sign</th><th>Name</th><th>Example</th><th>Result</th></tr>
+<tr><td><code>==</code></td><td>Equal to</td><td><code>3 == 3</code></td><td><code>TRUE</code></td></tr>
+<tr><td><code>!=</code></td><td>Not equal to</td><td><code>3 != 4</code></td><td><code>TRUE</code></td></tr>
+<tr><td><code>&lt;</code></td><td>Less than</td><td><code>3 &lt; 4</code></td><td><code>TRUE</code></td></tr>
+<tr><td><code>&lt;=</code></td><td>Less than or equal to</td><td><code>4 &lt;= 4</code></td><td><code>TRUE</code></td></tr>
+<tr><td><code>&gt;</code></td><td>Greater than</td><td><code>5 &gt; 4</code></td><td><code>TRUE</code></td></tr>
+<tr><td><code>&gt;=</code></td><td>Greater than or equal to</td><td><code>5 &gt;= 5</code></td><td><code>TRUE</code></td></tr>
+</table>
+<div class="example-title">Example</div>
+<pre>YES = <span class="kw">TRUE</span>
+
+<span class="kw">IF</span> YES == <span class="kw">TRUE</span>:
+    <span class="kw">PRINT</span> <span class="str">"TRUE"</span>
+<span class="kw">ELSE</span>:
+    <span class="kw">PRINT</span> <span class="str">"FALSE"</span></pre>
+
+<h3 id="op-logic">4.3 Logical Operators</h3>
+<p>
+Unlike most C-family languages, FLUX spells its logical operators as words,
+not symbols — there is no <code>&amp;&amp;</code>, <code>||</code>, or
+<code>!</code>.
+</p>
+<table>
+<tr><th>Keyword</th><th>Name</th><th>Example</th><th>Result</th></tr>
+<tr><td><code>AND</code></td><td>Logical AND</td><td><code>TRUE AND FALSE</code></td><td><code>FALSE</code></td></tr>
+<tr><td><code>OR</code></td><td>Logical OR</td><td><code>TRUE OR FALSE</code></td><td><code>TRUE</code></td></tr>
+<tr><td><code>NOT</code></td><td>Logical NOT</td><td><code>NOT FALSE</code></td><td><code>TRUE</code></td></tr>
+</table>
+
+<h3 id="op-assign">4.4 Assignment &amp; Punctuation</h3>
+<table>
+<tr><th>Sign</th><th>Meaning</th><th>Example</th></tr>
+<tr><td><code>=</code></td><td>Assignment</td><td><code>x = 5</code></td></tr>
+<tr><td><code>:</code></td><td>Opens a block body</td><td><code>IF x &gt; 0:</code></td></tr>
+<tr><td><code>,</code></td><td>Separates items / arguments / parameters</td><td><code>f(a, b, c)</code></td></tr>
+<tr><td><code>.</code></td><td>Member access</td><td><code>player.name</code></td></tr>
+<tr><td><code>( )</code></td><td>Grouping / call / parameters</td><td><code>f(x)</code>, <code>(a + b) * c</code></td></tr>
+<tr><td><code>[ ]</code></td><td>Array literal / indexing</td><td><code>[1, 2][0]</code></td></tr>
+<tr><td><code>{ }</code></td><td>Dictionary literal</td><td><code>{"key": 1}</code></td></tr>
+</table>
+<p class="small">
+Operator precedence, loosest to tightest: <code>OR</code> &rarr;
+<code>AND</code> &rarr; <code>NOT</code> &rarr; comparisons
+(<code>== != &lt; &lt;= &gt; &gt;=</code>) &rarr; <code>+ -</code> &rarr;
+<code>* / // %</code> &rarr; <code>**</code> (right-associative) &rarr;
+unary <code>-</code> &rarr; calls/indexing/member access (<code>() [] .</code>).
+</p>
+</section>
+
+<!-- CONTROL FLOW -->
+<section id="control-flow">
+<h2>5. Statements &amp; Control Flow</h2>
+
+<h3 id="cf-if">5.1 IF / ELIF / ELSE</h3>
+<pre>score = <span class="num">72</span>
+
+<span class="kw">IF</span> score &gt;= <span class="num">90</span>:
+    <span class="kw">PRINT</span> <span class="str">"A"</span>
+<span class="kw">ELIF</span> score &gt;= <span class="num">80</span>:
+    <span class="kw">PRINT</span> <span class="str">"B"</span>
+<span class="kw">ELIF</span> score &gt;= <span class="num">70</span>:
+    <span class="kw">PRINT</span> <span class="str">"C"</span>
+<span class="kw">ELSE</span>:
+    <span class="kw">PRINT</span> <span class="str">"F"</span></pre>
+
+<h3 id="cf-while">5.2 WHILE</h3>
+<pre>i = <span class="num">0</span>
+<span class="kw">WHILE</span> i &lt; <span class="num">5</span>:
+    <span class="kw">PRINT</span> i
+    i = i + <span class="num">1</span></pre>
+
+<h3 id="cf-for">5.3 FOR ... IN</h3>
+<p>
+<code>FOR</code> iterates over an array. Use the builtin <code>RANGE</code>
+function to iterate over a sequence of numbers.
+</p>
+<pre><span class="kw">FOR</span> color <span class="kw">IN</span> [<span class="str">"red"</span>, <span class="str">"green"</span>, <span class="str">"blue"</span>]:
+    <span class="kw">PRINT</span> color
+
+<span class="kw">FOR</span> i <span class="kw">IN</span> <span class="kw">RANGE</span>(<span class="num">5</span>):
+    <span class="kw">PRINT</span> i        <span class="cmt"># 0, 1, 2, 3, 4</span>
+
+<span class="kw">FOR</span> i <span class="kw">IN</span> <span class="kw">RANGE</span>(<span class="num">2</span>, <span class="num">10</span>, <span class="num">2</span>):
+    <span class="kw">PRINT</span> i        <span class="cmt"># 2, 4, 6, 8</span></pre>
+
+<h3 id="cf-def">5.4 DEF (Functions)</h3>
+<pre><span class="kw">DEF</span> factorial(n):
+    <span class="kw">IF</span> n &lt;= <span class="num">1</span>:
+        <span class="kw">RETURN</span> <span class="num">1</span>
+    <span class="kw">RETURN</span> n * factorial(n - <span class="num">1</span>)
+
+<span class="kw">PRINT</span> factorial(<span class="num">5</span>)   <span class="cmt"># 120</span></pre>
+<p>Parameters may have default values:</p>
+<pre><span class="kw">DEF</span> greet(name, greeting=<span class="str">"Hello"</span>):
+    <span class="kw">RETURN</span> greeting + <span class="str">", "</span> + name
+
+<span class="kw">PRINT</span> greet(<span class="str">"Ada"</span>)              <span class="cmt"># "Hello, Ada"</span>
+<span class="kw">PRINT</span> greet(<span class="str">"Ada"</span>, <span class="str">"Hi"</span>)         <span class="cmt"># "Hi, Ada"</span></pre>
+
+<h3 id="cf-class">5.5 CLASS</h3>
+<p>
+The constructor method is named <code>INIT</code>. Every method's first
+parameter conventionally refers to the instance and is accessed inside the
+method body via <code>SELF</code>.
+</p>
+<pre><span class="kw">CLASS</span> Player:
+    <span class="kw">DEF</span> <span class="kw">INIT</span>(name, level):
+        self.name = name
+        self.level = level
+
+    <span class="kw">DEF</span> describe(self):
+        <span class="kw">RETURN</span> self.name + <span class="str">" (level "</span> + str(self.level) + <span class="str">")"</span>
+
+hero = Player(<span class="str">"Aria"</span>, <span class="num">10</span>)
+<span class="kw">PRINT</span> hero.describe()   <span class="cmt"># "Aria (level 10)"</span></pre>
+
+<h3 id="cf-try">5.6 TRY / EXCEPT / FINALLY</h3>
+<p>
+<code>EXCEPT</code> may be bare (catches anything), name a specific error
+type to match against the error message, and/or bind the error text to a
+variable with <code>AS</code>. <code>FINALLY</code> always runs, whether or
+not an error occurred.
+</p>
+<pre><span class="kw">TRY</span>:
+    result = <span class="num">10</span> // <span class="num">0</span>
+<span class="kw">EXCEPT</span> <span class="kw">AS</span> err:
+    <span class="kw">PRINT</span> <span class="str">"Caught: "</span> + err
+<span class="kw">FINALLY</span>:
+    <span class="kw">PRINT</span> <span class="str">"cleanup always runs"</span></pre>
+<pre><span class="kw">TRY</span>:
+    <span class="kw">RAISE</span> <span class="str">"custom failure"</span>
+<span class="kw">EXCEPT</span> Exception <span class="kw">AS</span> e:
+    <span class="kw">PRINT</span> <span class="str">"handled: "</span> + e</pre>
+
+<h3 id="cf-ask">5.7 ASK / ANSWER</h3>
+<p>
+<code>ASK</code> prints a prompt, blocks for a line of input from
+<code>stdin</code>, and stores the result in an implicit variable named
+<code>ANSWER</code>. The input is coerced to an <code>Integer</code> if
+possible, then a <code>Float</code>, and otherwise left as a
+<code>String</code>. Each new <code>ASK</code> overwrites <code>ANSWER</code>,
+so copy it to another variable first if you need to keep it around.
+</p>
+<pre><span class="kw">ASK</span> <span class="str">"What is your name?"</span>
+<span class="kw">PRINT</span> <span class="str">"Hello, "</span> + ANSWER</pre>
+</section>
+
+<!-- ERRORS -->
+<section id="errors">
+<h2>6. Errors</h2>
+<p>FLUX errors happen in one of three stages: lexing, parsing, or execution.</p>
+
+<h3 id="err-lex">6.1 Lex Errors</h3>
+<table>
+<tr><th>Error</th><th>Message</th><th>Typical cause</th></tr>
+<tr><td>UnexpectedCharacter</td><td><code>unexpected character '{ch}' at line {line}, column {column}</code></td><td>A character the lexer doesn't recognize, e.g. <code>@</code>, <code>&amp;</code>, or a lone <code>!</code> not followed by <code>=</code></td></tr>
+<tr><td>UnterminatedString</td><td><code>unterminated string at line {line}, column {column}</code></td><td>A string literal missing its closing quote before end of file</td></tr>
+<tr><td>InconsistentIndentation</td><td><code>inconsistent indentation at line {line}, column {column}</code></td><td>A DEDENT that doesn't land back on a previously-used indentation width</td></tr>
+<tr><td>InvalidNumber</td><td><code>invalid number literal '{value}' at line {line}, column {column}</code></td><td>A malformed numeric literal that can't be parsed as an integer or float</td></tr>
+</table>
+
+<h3 id="err-parse">6.2 Parse Errors</h3>
+<table>
+<tr><th>Error</th><th>Message</th><th>Typical cause</th></tr>
+<tr><td>SyntaxError</td><td><code>parse error at line {line}, column {column}: {message}</code></td><td>Any grammar violation — a missing <code>:</code> after a block header, a missing closing <code>)</code>/<code>]</code>/<code>}</code>, an invalid assignment target, or an unexpected token where an expression/statement was expected</td></tr>
+</table>
+<div class="note">
+<b>Common message text</b> you'll see after <code>SyntaxError</code>:
+<code>expected ':' after block header</code>,
+<code>expected newline after ':'</code>,
+<code>expected indented block</code>,
+<code>expected ')' after arguments</code>,
+<code>expected statement</code>,
+<code>expected expression</code>,
+<code>invalid assignment target</code>.
+</div>
+
+<h3 id="err-runtime">6.3 Runtime Errors</h3>
+<table>
+<tr><th>Error</th><th>Message</th><th>Typical cause</th></tr>
+<tr><td>UndefinedVariable</td><td><code>undefined variable '{name}'</code></td><td>Reading a variable that was never assigned</td></tr>
+<tr><td>UndefinedProperty</td><td><code>undefined property '{name}'</code></td><td>Accessing a field or method that doesn't exist on an object</td></tr>
+<tr><td>TypeError</td><td><code>type error: {message}</code></td><td>An operation applied to a value of the wrong type, e.g. indexing a number, or calling something that isn't callable</td></tr>
+<tr><td>ArgumentError</td><td><code>argument error: {message}</code></td><td>Wrong number of arguments to a function/native function, or a missing required parameter</td></tr>
+<tr><td>IndexError</td><td><code>index error: {message}</code></td><td>An array or string index that is out of range</td></tr>
+<tr><td>KeyError</td><td><code>key error: {message}</code></td><td>Looking up a dictionary key that doesn't exist</td></tr>
+<tr><td>ValueError</td><td><code>value error: {message}</code></td><td>A value that's the right type but an invalid value, e.g. dividing by zero, or an invalid literal passed to <code>int()</code>/<code>float()</code></td></tr>
+<tr><td>Exception</td><td><code>{message}</code></td><td>Raised explicitly via <code>RAISE</code>, or an internal/module-level failure (e.g. a file read error, an unknown module in <code>IMPORT</code>)</td></tr>
+</table>
+<div class="tip">
+All of the runtime errors above (everything except the internal
+RETURN/BREAK/CONTINUE control-flow signals) can be caught with
+<code>TRY</code>/<code>EXCEPT</code>. An <code>EXCEPT</code> clause with no
+type, or typed <code>Exception</code>, catches anything; a named type only
+matches if that name appears in the error's message text.
+</div>
+</section>
+
+<!-- FXWINDOWS -->
+<section id="fxwindows">
+<h2>7. FXwindows Library</h2>
+<p>
+<code>FXwindows</code> is FLUX's standard GUI module. Import it, build a
+window, add widgets to it, then call <code>.show()</code> to open a real,
+interactive OS window (built on <code>winit</code> + <code>egui</code>).
+</p>
+<pre><span class="kw">IMPORT</span> fxwindows
+
+win = fxwindows.create_window(<span class="str">"My App"</span>, <span class="num">640</span>, <span class="num">480</span>)
+win.add(fxwindows.Label(<span class="str">"Welcome!"</span>, <span class="num">20</span>, <span class="num">20</span>))
+win.add(fxwindows.Button(<span class="str">"Click Me"</span>, <span class="num">120</span>, <span class="num">32</span>))
+win.show()</pre>
+
+<h3>Window</h3>
+<table>
+<tr><th>Function / Method</th><th>Signature</th><th>Description</th></tr>
+<tr><td><code>create_window</code></td><td><code>fxwindows.create_window(title, width, height)</code></td><td>Creates a window object</td></tr>
+<tr><td><code>.add</code></td><td><code>window.add(widget)</code></td><td>Adds a widget to the window's child list</td></tr>
+<tr><td><code>.show</code></td><td><code>window.show()</code></td><td>Opens the window and blocks until the user closes it</td></tr>
+</table>
+
+<h3>Widgets</h3>
+<table>
+<tr><th>Widget</th><th>Constructor</th><th>Fields (in order)</th></tr>
+<tr><td>Button</td><td><code>fxwindows.Button(text, width, height)</code></td><td>text, width, height</td></tr>
+<tr><td>Label</td><td><code>fxwindows.Label(text, x, y)</code></td><td>text, x, y</td></tr>
+<tr><td>TextBox</td><td><code>fxwindows.TextBox(placeholder, x, y)</code></td><td>placeholder, x, y</td></tr>
+<tr><td>Image</td><td><code>fxwindows.Image(path, x, y)</code></td><td>path, x, y &mdash; <span class="small">drawn as a labeled placeholder box today</span></td></tr>
+<tr><td>Panel</td><td><code>fxwindows.Panel(x, y, width, height)</code></td><td>x, y, width, height</td></tr>
+<tr><td>Slider</td><td><code>fxwindows.Slider(min, max, value, x, y)</code></td><td>min, max, value, x, y</td></tr>
+<tr><td>Checkbox</td><td><code>fxwindows.Checkbox(label, checked, x, y)</code></td><td>label, checked, x, y</td></tr>
+</table>
+<div class="note">
+FXwindows is built with the <code>gui</code> Cargo feature, which is on by
+default. Building with <code>--no-default-features</code> replaces
+<code>.show()</code> with a text-summary placeholder printed to the
+console — useful on headless machines/CI with no display.
+</div>
+<div class="example-title">Example: a small settings panel</div>
+<pre><span class="kw">IMPORT</span> fxwindows
+
+win = fxwindows.create_window(<span class="str">"Settings"</span>, <span class="num">400</span>, <span class="num">300</span>)
+win.add(fxwindows.Label(<span class="str">"Volume"</span>, <span class="num">20</span>, <span class="num">20</span>))
+win.add(fxwindows.Slider(<span class="num">0</span>, <span class="num">100</span>, <span class="num">50</span>, <span class="num">20</span>, <span class="num">44</span>))
+win.add(fxwindows.Checkbox(<span class="str">"Enable notifications"</span>, <span class="kw">TRUE</span>, <span class="num">20</span>, <span class="num">80</span>))
+win.add(fxwindows.Button(<span class="str">"Save"</span>, <span class="num">100</span>, <span class="num">32</span>))
+win.show()</pre>
+</section>
+
+<!-- EXAMPLES -->
+<section id="examples">
+<h2>8. Full Examples</h2>
+
+<h3>8.1 Hello, World</h3>
+<pre><span class="kw">PRINT</span> <span class="str">"Hello, World!"</span></pre>
+
+<h3>8.2 FizzBuzz</h3>
+<pre><span class="kw">FOR</span> i <span class="kw">IN</span> <span class="kw">RANGE</span>(<span class="num">1</span>, <span class="num">16</span>):
+    <span class="kw">IF</span> i % <span class="num">15</span> == <span class="num">0</span>:
+        <span class="kw">PRINT</span> <span class="str">"FizzBuzz"</span>
+    <span class="kw">ELIF</span> i % <span class="num">3</span> == <span class="num">0</span>:
+        <span class="kw">PRINT</span> <span class="str">"Fizz"</span>
+    <span class="kw">ELIF</span> i % <span class="num">5</span> == <span class="num">0</span>:
+        <span class="kw">PRINT</span> <span class="str">"Buzz"</span>
+    <span class="kw">ELSE</span>:
+        <span class="kw">PRINT</span> i</pre>
+
+<h3>8.3 Classes, Errors, and Modules together</h3>
+<pre><span class="kw">CLASS</span> BankAccount:
+    <span class="kw">DEF</span> <span class="kw">INIT</span>(owner, balance=<span class="num">0</span>):
+        self.owner = owner
+        self.balance = balance
+
+    <span class="kw">DEF</span> withdraw(self, amount):
+        <span class="kw">IF</span> amount &gt; self.balance:
+            <span class="kw">RAISE</span> <span class="str">"insufficient funds"</span>
+        self.balance = self.balance - amount
+        <span class="kw">RETURN</span> self.balance
+
+acct = BankAccount(<span class="str">"Ada"</span>, <span class="num">100</span>)
+
+<span class="kw">TRY</span>:
+    acct.withdraw(<span class="num">250</span>)
+<span class="kw">EXCEPT</span> <span class="kw">AS</span> e:
+    <span class="kw">PRINT</span> <span class="str">"Transaction failed: "</span> + e
+<span class="kw">FINALLY</span>:
+    <span class="kw">PRINT</span> <span class="str">"Balance is now "</span> + str(acct.balance)
+
+<span class="kw">IMPORT</span> math
+<span class="kw">PRINT</span> math.abs(-<span class="num">42</span>)</pre>
+
+<h3>8.4 Interactive input</h3>
+<pre><span class="kw">ASK</span> <span class="str">"What is your name?"</span>
+name = ANSWER
+
+<span class="kw">ASK</span> <span class="str">"How old are you?"</span>
+age = ANSWER
+
+<span class="kw">IF</span> age &gt;= <span class="num">18</span>:
+    <span class="kw">PRINT</span> name + <span class="str">", you are an adult."</span>
+<span class="kw">ELSE</span>:
+    <span class="kw">PRINT</span> name + <span class="str">", you are a minor."</span></pre>
+
+</section>
+
+<footer class="page-footer">
+FLUX Language Wiki &middot; Generated reference for FLUX 1.0.0
+</footer>
+
+</body>
+</html>
