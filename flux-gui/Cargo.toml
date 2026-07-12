@@ -1,0 +1,12 @@
+[package]
+name = "flux-gui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# eframe bundles winit (window/event loop) + egui (immediate-mode UI) + a
+# GPU backend, so this one dependency is enough to open a real OS window.
+eframe = { version = "0.28", default-features = false, features = [
+    "default_fonts",
+    "glow",
+] }

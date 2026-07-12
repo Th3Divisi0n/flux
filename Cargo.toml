@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = [
+    "flux-ast",
+    "flux-lexer",
+    "flux-parser",
+    "flux-interpreter",
+    "flux-runtime",
+    "flux-cli",
+    "flux-gui",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+license = "MIT"
+authors = ["FLUX Team"]
+description = "Fast, Lightweight, Universal eXecution"
+
+[workspace.dependencies]
+flux-ast = { path = "flux-ast" }
+flux-lexer = { path = "flux-lexer" }
+flux-parser = { path = "flux-parser" }
+flux-interpreter = { path = "flux-interpreter" }
+flux-runtime = { path = "flux-runtime" }
+flux-gui = { path = "flux-gui" }
+thiserror = "2"
+clap = { version = "4", features = ["derive"] }
+
+# Integration tests live at tests/integration_test.rs
+# Run with: cargo test -p flux-cli

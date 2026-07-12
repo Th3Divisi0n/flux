@@ -1,0 +1,9 @@
+[package]
+name = "flux-parser"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+flux-ast.workspace = true
+flux-lexer.workspace = true
+thiserror.workspace = true

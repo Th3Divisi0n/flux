@@ -1,0 +1,20 @@
+[package]
+name = "flux-interpreter"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+flux-ast = { path = "../flux-ast" }
+flux-runtime = { path = "../flux-runtime" }
+flux-lexer = { path = "../flux-lexer" }
+flux-parser = { path = "../flux-parser" }
+thiserror = "2"
+flux-gui = { path = "../flux-gui", optional = true }
+
+[features]
+# Real FXwindows rendering (winit + egui) is on by default. Build with
+# `--no-default-features` to fall back to the old text-summary placeholder
+# for `.show()` — e.g. on a machine/CI box with no display and no need to
+# pull in a windowing toolchain.
+default = ["gui"]
+gui = ["dep:flux-gui"]

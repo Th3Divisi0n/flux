@@ -1,0 +1,6 @@
+[package]
+name = "flux-ast"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

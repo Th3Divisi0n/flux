@@ -1,0 +1,23 @@
+[package]
+name = "flux-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "flux"
+path = "src/main.rs"
+
+[[bin]]
+name = "fx"
+path = "src/main.rs"
+
+[dependencies]
+flux-ast.workspace = true
+flux-lexer.workspace = true
+flux-parser.workspace = true
+flux-interpreter.workspace = true
+clap.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+flux-interpreter = { workspace = true }

@@ -1,0 +1,82 @@
+{
+    "name": "flux",
+    "displayName": "FLUX",
+    "description": "Official language support for FLUX — Fast, Lightweight, Universal eXecution",
+    "version": "1.0.0",
+    "publisher": "flux-lang",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "keywords": [
+        "flux",
+        "fx",
+        "programming language"
+    ],
+    "main": "./out/extension.js",
+    "activationEvents": [
+        "onLanguage:flux"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "flux",
+                "aliases": [
+                    "FLUX",
+                    "flux"
+                ],
+                "extensions": [
+                    ".fx"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "flux",
+                "scopeName": "source.flux",
+                "path": "./syntaxes/flux.tmLanguage.json"
+            }
+        ],
+        "commands": [
+            {
+                "command": "flux.runFile",
+                "title": "FLUX: Run Current File"
+            },
+            {
+                "command": "flux.buildFile",
+                "title": "FLUX: Build Current File"
+            }
+        ],
+        "menus": {
+            "editor/title/run": [
+                {
+                    "command": "flux.runFile",
+                    "when": "resourceExtname == .fx",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "FLUX",
+            "properties": {
+                "flux.executablePath": {
+                    "type": "string",
+                    "default": "fx",
+                    "description": "Path to the FLUX executable (flux or fx)"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/vscode": "^1.80.0",
+        "typescript": "^5.0.0"
+    }
+}
