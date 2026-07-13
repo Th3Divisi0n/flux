@@ -429,7 +429,19 @@ pub fn apply_binary_op(left: &Value, op: BinaryOp, right: &Value) -> FluxResult<
         BinaryOp::Add => add_values(left, right),
         BinaryOp::Sub => numeric_binary(left, right, |a, b| Value::Integer(a - b), |a, b| Value::Float(a - b)),
         BinaryOp::Mul => numeric_binary(left, right, |a, b| Value::Integer(a * b), |a, b| Value::Float(a * b)),
-        BinaryOp::Div => numeric_binary(left, right, |a, b| Value::Float(a as f64 / b as f64), |a, b| Value::Float(a / b)),
+        BinaryOp::Div => {
+            let is_zero = match right {
+                Value::Integer(0) => true,
+                Value::Float(f) => *f == 0.0,
+                _ => false,
+            };
+            if is_zero {
+                return Err(RuntimeError::ValueError {
+                    message: "division by zero".to_string(),
+                });
+            }
+            numeric_binary(left, right, |a, b| Value::Float(a as f64 / b as f64), |a, b| Value::Float(a / b))
+        }
         BinaryOp::FloorDiv => {
             if matches!((left, right), (Value::Integer(_) | Value::Float(_), Value::Integer(0))) {
                 return Err(RuntimeError::ValueError {
@@ -516,5 +528,153 @@ fn values_equal(left: &Value, right: &Value) -> bool {
         (Value::Boolean(a), Value::Boolean(b)) => a == b,
         (Value::None, Value::None) => true,
         _ => false,
+    }
+}
+
+/// A deliberately tiny TOML reader/writer for FLUX's own `flux.toml`
+/// files — a flat `[project]`/`[package]` metadata table plus a flat
+/// `[dependencies]` table of `name = "version"` pairs (see
+/// `flux-cli`'s `create_project` for what one looks like). It's not a
+/// general TOML parser: no nesting, no arrays, no multi-line strings.
+/// Used by the Phase 5 package manager (`fx install`/`remove`/`update`
+/// in `flux-cli`) and by the interpreter's `IMPORT` fallback that loads
+/// an installed package's manifest to find its entry file.
+pub mod manifest {
+    /// Returns the value of `key` inside `[section]`, with surrounding
+    /// quotes stripped if present. `None` if the section or key is missing.
+    pub fn get_field(toml: &str, section: &str, key: &str) -> Option<String> {
+        section_pairs(toml, section)
+            .into_iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v)
+    }
+
+    /// Returns every `key = value` pair found directly under `[section]`,
+    /// in file order, with surrounding quotes stripped from values.
+    pub fn section_pairs(toml: &str, section: &str) -> Vec<(String, String)> {
+        let mut pairs = Vec::new();
+        let mut in_section = false;
+        for raw_line in toml.lines() {
+            let line = raw_line.trim();
+            if line.starts_with('[') && line.ends_with(']') {
+                in_section = line[1..line.len() - 1].trim() == section;
+                continue;
+            }
+            if !in_section || line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            if let Some((key, value)) = line.split_once('=') {
+                pairs.push((
+                    key.trim().to_string(),
+                    value.trim().trim_matches('"').to_string(),
+                ));
+            }
+        }
+        pairs
+    }
+
+    /// Sets `key = "value"` inside `[section]`, creating (and appending)
+    /// the section if it doesn't exist yet, or updating the value in
+    /// place if the key is already present. Returns the new file text.
+    pub fn upsert_field(toml: &str, section: &str, key: &str, value: &str) -> String {
+        let header = format!("[{section}]");
+        let mut lines: Vec<String> = toml.lines().map(|l| l.to_string()).collect();
+
+        let section_start = lines.iter().position(|l| l.trim() == header);
+
+        let Some(start) = section_start else {
+            if !toml.trim().is_empty() {
+                lines.push(String::new());
+            }
+            lines.push(header);
+            lines.push(format!("{key} = \"{value}\""));
+            return lines.join("\n") + "\n";
+        };
+
+        let mut end = lines.len();
+        for (i, l) in lines.iter().enumerate().skip(start + 1) {
+            let t = l.trim();
+            if t.starts_with('[') && t.ends_with(']') {
+                end = i;
+                break;
+            }
+        }
+
+        let existing_key_line = lines[start + 1..end].iter().position(|l| {
+            l.split_once('=')
+                .map(|(k, _)| k.trim() == key)
+                .unwrap_or(false)
+        });
+
+        match existing_key_line {
+            Some(offset) => lines[start + 1 + offset] = format!("{key} = \"{value}\""),
+            None => lines.insert(end, format!("{key} = \"{value}\"")),
+        }
+
+        lines.join("\n") + "\n"
+    }
+
+    /// Removes the `key = ...` line inside `[section]`, if present.
+    /// Returns the new file text (unchanged if the key wasn't found).
+    pub fn remove_field(toml: &str, section: &str, key: &str) -> String {
+        let header = format!("[{section}]");
+        let mut in_section = false;
+        let mut out = Vec::new();
+        for raw_line in toml.lines() {
+            let trimmed = raw_line.trim();
+            if trimmed.starts_with('[') && trimmed.ends_with(']') {
+                in_section = trimmed == header;
+                out.push(raw_line.to_string());
+                continue;
+            }
+            if in_section {
+                if let Some((k, _)) = trimmed.split_once('=') {
+                    if k.trim() == key {
+                        continue;
+                    }
+                }
+            }
+            out.push(raw_line.to_string());
+        }
+        out.join("\n") + "\n"
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn reads_fields() {
+            let toml = "[package]\nname = \"FXstrings\"\nversion = \"1.0.0\"\n";
+            assert_eq!(get_field(toml, "package", "name").as_deref(), Some("FXstrings"));
+            assert_eq!(get_field(toml, "package", "version").as_deref(), Some("1.0.0"));
+            assert_eq!(get_field(toml, "package", "missing"), None);
+        }
+
+        #[test]
+        fn upserts_new_section_and_key() {
+            let toml = "[project]\nname = \"demo\"\n\n[dependencies]\n";
+            let updated = upsert_field(toml, "dependencies", "FXstrings", "1.0.0");
+            assert_eq!(
+                get_field(&updated, "dependencies", "FXstrings").as_deref(),
+                Some("1.0.0")
+            );
+
+            let updated2 = upsert_field(&updated, "dependencies", "FXstrings", "1.1.0");
+            assert_eq!(
+                get_field(&updated2, "dependencies", "FXstrings").as_deref(),
+                Some("1.1.0")
+            );
+            // Only one line for the key, not two.
+            assert_eq!(updated2.matches("FXstrings").count(), 1);
+        }
+
+        #[test]
+        fn removes_key() {
+            let toml = "[dependencies]\nA = \"1.0.0\"\nB = \"2.0.0\"\n";
+            let updated = remove_field(toml, "dependencies", "A");
+            assert_eq!(get_field(&updated, "dependencies", "A"), None);
+            assert_eq!(get_field(&updated, "dependencies", "B").as_deref(), Some("2.0.0"));
+        }
     }
 }

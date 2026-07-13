@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # FLUX
 
 **Fast, Lightweight, Universal eXecution**
@@ -67,11 +66,12 @@ FLUX/
 ├── flux-interpreter/  # Development-mode interpreter
 ├── flux-jit/          # JIT engine (future)
 ├── flux-runtime/      # Runtime support
-├── flux-gui/          # Window rendering backend for FXwindows (winit + egui)
+├── flux-gui/          # Window rendering backend for FXwindows and FXterminal (winit + egui)
 ├── flux-cli/          # flux / fx command-line tool
 ├── standard_library/  # Built-in modules
-├── libraries/         # Public FLUX libraries (e.g. FXwindows)
+├── libraries/         # Public FLUX libraries (e.g. FXwindows, FXterminal)
 ├── package_manager/   # Package registry and resolver
+├── registry/          # Bundled local package registry used by `fx install <name>`
 ├── vscode_extension/  # Official VS Code extension
 ├── installer/         # Windows installer scripts
 ├── documentation/     # Language specification and guides
@@ -103,14 +103,11 @@ workspace) to skip the windowing dependency entirely.
 - [x] **Phase 1** — Language specification
 - [x] **Phase 2** — Working interpreter (lexer, parser, AST, variables, functions, control flow)
 - [ ] **Phase 3** — Native compiler (LLVM backend)
-- [x] **Phase 4** — Standard library (FXwindows GUI; files, networking still to come)
-- [ ] **Phase 5** — Package manager
+- [x] **Phase 4** — Standard library (FXwindows GUI, FXterminal consoles; files, networking still to come)
+- [x] **Phase 5** — Package manager (local install/remove/update against a file-based registry; a hosted network registry is still to come)
 - [ ] **Phase 6** — VS Code extension (full IntelliSense)
-- [ ] **Phase 7** — Windows installer (FLUXSetup.exe)
+- [x] **Phase 7** — Windows installer (FLUXSetup.exe)
 
 ## License
 
-MIT License — see [LICENSE](LICENSE).
-=======
-# flux
->>>>>>> c77f82cce5944f9602c5ae1a8ed4586ba92d33ee
+Apache 2.0 License — see LICENSE for more info

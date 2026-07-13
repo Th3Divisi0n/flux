@@ -43,6 +43,27 @@ window = FXwindows.create_window("My FLUX App", 800, 600)
 window.show()
 ```
 
+## FXterminal
+
+Real, terminal-styled console windows you can print into while your
+program keeps running. See
+[`libraries/FXterminal/README.md`](../libraries/FXterminal/README.md)
+for the full API and an example.
+
+```flux
+IMPORT FXterminal
+
+console = FXterminal.create_console("Build Log", 640, 400)
+console.show()
+console.print("Hello from FLUX!")
+```
+
+## Installed packages
+
+Anything installed with `fx install` (see
+[`package_manager/README.md`](../package_manager/README.md)) is imported
+the same way — `IMPORT PackageName` — once it's in `flux_modules/`.
+
 ## Planned Modules
 
 | Module | Purpose |

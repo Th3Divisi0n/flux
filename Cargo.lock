@@ -688,6 +688,7 @@ dependencies = [
  "flux-interpreter",
  "flux-lexer",
  "flux-parser",
+ "flux-runtime",
  "thiserror 2.0.18",
 ]
 

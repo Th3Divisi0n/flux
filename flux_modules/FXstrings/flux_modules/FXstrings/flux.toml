@@ -1,0 +1,8 @@
+[project]
+name = "FXstrings"
+version = "1.0.0"
+description = "Small string utility functions for FLUX: reverse, palindrome check, and repeat."
+authors = ["FLUX Team"]
+flux_version = "1.0.0"
+
+[dependencies]

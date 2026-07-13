@@ -183,59 +183,59 @@ impl<'a> Lexer<'a> {
         Ok(tokens)
     }
 
-    fn handle_indentation(&mut self, tokens: &mut Vec<Token>) -> Result<(), LexError> {
-        let mut indent = 0;
-        while self.pos < self.chars.len() {
-            match self.chars[self.pos] {
-                ' ' => {
-                    indent += 1;
+fn handle_indentation(&mut self, tokens: &mut Vec<Token>) -> Result<(), LexError> {
+    let mut indent = 0;
+    while self.pos < self.chars.len() {
+        match self.chars[self.pos] {
+            ' ' => {
+                indent += 1;
+                self.advance_char();
+            }
+            '\t' => {
+                indent += 4;
+                self.advance_char();
+            }
+            '\r' => {
+                self.advance_char();
+                continue;
+            }
+            '\n' => {
+                self.advance_char();
+                indent = 0;
+                continue;
+            }
+            '#' => {
+                self.skip_comment();
+                if self.pos < self.chars.len() && self.chars[self.pos] == '\n' {
                     self.advance_char();
-                }
-                '\t' => {
-                    indent += 4;
-                    self.advance_char();
-                }
-                '\n' => {
-                    self.advance_char();
-                    self.line += 1;
-                    self.column = 1;
                     indent = 0;
-                    continue;
                 }
-                '#' => {
-                    self.skip_comment();
-                    if self.pos < self.chars.len() && self.chars[self.pos] == '\n' {
-                        self.advance_char();
-                        self.line += 1;
-                        self.column = 1;
-                        indent = 0;
-                    }
-                    continue;
-                }
-                _ => break,
+                continue;
             }
+            _ => break,
         }
-
-        let current = *self.indent_stack.last().unwrap();
-        if indent > current {
-            self.indent_stack.push(indent);
-            tokens.push(self.make_token(TokenKind::Indent, "".to_string()));
-        } else if indent < current {
-            while self.indent_stack.len() > 1 && *self.indent_stack.last().unwrap() > indent {
-                self.indent_stack.pop();
-                self.pending_indents.push(self.make_token(TokenKind::Dedent, "".to_string()));
-            }
-            if *self.indent_stack.last().unwrap() != indent {
-                return Err(LexError::InconsistentIndentation {
-                    line: self.line,
-                    column: self.column,
-                });
-            }
-        }
-
-        self.at_line_start = false;
-        Ok(())
     }
+
+    let current = *self.indent_stack.last().unwrap();
+    if indent > current {
+        self.indent_stack.push(indent);
+        tokens.push(self.make_token(TokenKind::Indent, "".to_string()));
+    } else if indent < current {
+        while self.indent_stack.len() > 1 && *self.indent_stack.last().unwrap() > indent {
+            self.indent_stack.pop();
+            self.pending_indents.push(self.make_token(TokenKind::Dedent, "".to_string()));
+        }
+        if *self.indent_stack.last().unwrap() != indent {
+            return Err(LexError::InconsistentIndentation {
+                line: self.line,
+                column: self.column,
+            });
+        }
+    }
+
+    self.at_line_start = false;
+    Ok(())
+}
 
     fn next_token(&mut self) -> Result<Token, LexError> {
         let ch = self.chars[self.pos];
@@ -563,5 +563,21 @@ mod tests {
         let tokens = lex(source).unwrap();
         assert!(tokens.iter().any(|t| matches!(t.kind, TokenKind::Indent)));
         assert!(tokens.iter().any(|t| matches!(t.kind, TokenKind::Dedent)));
+    }
+
+    /// A blank CRLF line ("\r\n" with no leading spaces) inside an
+    /// indented block used to be misread as a dedent all the way back to
+    /// column 0, closing the block early. Two statements at the same
+    /// indent level separated by a blank line must stay in the same
+    /// block: exactly one Indent/Dedent pair for the whole block, not one
+    /// per statement.
+    #[test]
+    fn blank_crlf_line_does_not_dedent() {
+        let source = "IF TRUE:\r\n    PRINT 1\r\n\r\n    PRINT 2\r\n";
+        let tokens = lex(source).unwrap();
+        let indents = tokens.iter().filter(|t| matches!(t.kind, TokenKind::Indent)).count();
+        let dedents = tokens.iter().filter(|t| matches!(t.kind, TokenKind::Dedent)).count();
+        assert_eq!(indents, 1);
+        assert_eq!(dedents, 1);
     }
 }

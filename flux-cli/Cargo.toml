@@ -16,6 +16,7 @@ flux-ast.workspace = true
 flux-lexer.workspace = true
 flux-parser.workspace = true
 flux-interpreter.workspace = true
+flux-runtime.workspace = true
 clap.workspace = true
 thiserror.workspace = true
 

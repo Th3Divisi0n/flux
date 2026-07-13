@@ -833,9 +833,16 @@ impl Parser {
                 self.advance();
                 Ok(name)
             }
-            TokenKind::Init => {
+            // A number of keywords (PRINT, etc.) are also legitimate member
+            // or function names in real FLUX programs — e.g.
+            // `console.print(...)`. Rather than special-casing each one
+            // individually (as was previously done just for `init`), accept
+            // any keyword token here and fall back to its original source
+            // text.
+            kind if Self::is_keyword(&kind) => {
+                let lexeme = self.tokens[self.pos].lexeme.clone();
                 self.advance();
-                Ok("init".to_string())
+                Ok(lexeme)
             }
             _ => self.error(message),
         }
@@ -864,6 +871,45 @@ impl Parser {
             _ => a == b,
         }
     }
+
+    fn is_keyword(kind: &TokenKind) -> bool {
+    matches!(
+        kind,
+        TokenKind::Print
+            | TokenKind::Def
+            | TokenKind::Return
+            | TokenKind::If
+            | TokenKind::Elif
+            | TokenKind::Else
+            | TokenKind::For
+            | TokenKind::In
+            | TokenKind::While
+            | TokenKind::Class
+            | TokenKind::Init
+            | TokenKind::Import
+            | TokenKind::From
+            | TokenKind::As
+            | TokenKind::Try
+            | TokenKind::Except
+            | TokenKind::Finally
+            | TokenKind::Raise
+            | TokenKind::Async
+            | TokenKind::Await
+            | TokenKind::True
+            | TokenKind::False
+            | TokenKind::None
+            | TokenKind::And
+            | TokenKind::Or
+            | TokenKind::Not
+            | TokenKind::Range
+            | TokenKind::Break
+            | TokenKind::Continue
+            | TokenKind::Pass
+            | TokenKind::SelfKw
+            | TokenKind::Type
+            | TokenKind::Ask
+    )
+}
 
     fn advance(&mut self) {
         if !self.is_at_end() {

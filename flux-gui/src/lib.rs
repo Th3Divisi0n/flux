@@ -11,6 +11,9 @@
 //! `FXwindows.window.show()` behaves in FLUX code today.
 
 use eframe::egui;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
+use std::thread::JoinHandle;
 
 /// A single UI element inside a window. Fields mirror the FXwindows
 /// constructors documented in `libraries/FXwindows/README.md`.
@@ -179,5 +182,203 @@ impl eframe::App for FxApp {
                 }
             }
         });
+    }
+}
+
+// ---------------------------------------------------------------------
+// FXterminal: real terminal-styled console windows.
+// ---------------------------------------------------------------------
+//
+// Unlike `show_window` above, a console needs to stay open *while* the
+// rest of the FLUX program keeps running and feeding it new lines — a
+// script does `console.show()` once and then calls `console.print(...)`
+// many times as it goes. So `open_console` can't block the calling
+// thread the way `show_window` does: it spawns the window's event loop
+// on a background thread and returns immediately, handing back a cheap,
+// cloneable [`ConsoleHandle`] that `flux-interpreter` can capture in
+// every native method on the `Console` object.
+
+/// Plain description of a console window's starting size and title.
+#[derive(Debug, Clone)]
+pub struct ConsoleSpec {
+    pub title: String,
+    pub width: f32,
+    pub height: f32,
+}
+
+/// A thread-safe handle to a (possibly not-yet-open) console window.
+/// Cloning is cheap — it's just clones of the underlying `Arc`s — so the
+/// same handle can be captured by `.print()`, `.clear()`, and `.close()`
+/// closures independently, and by the background render thread itself.
+#[derive(Clone)]
+pub struct ConsoleHandle {
+    lines: Arc<Mutex<Vec<String>>>,
+    closed: Arc<AtomicBool>,
+    // Populated once the window actually opens, so `print_line`/`clear`
+    // can nudge it to repaint immediately instead of waiting for its next
+    // scheduled frame.
+    repaint_ctx: Arc<Mutex<Option<egui::Context>>>,
+}
+
+impl ConsoleHandle {
+    pub fn new() -> Self {
+        Self {
+            lines: Arc::new(Mutex::new(Vec::new())),
+            closed: Arc::new(AtomicBool::new(false)),
+            repaint_ctx: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    /// Appends one line of text and wakes the window (if open) to redraw.
+    pub fn print_line(&self, text: String) {
+        self.lines.lock().unwrap().push(text);
+        self.wake();
+    }
+
+    /// Clears all text currently shown in the console.
+    pub fn clear(&self) {
+        self.lines.lock().unwrap().clear();
+        self.wake();
+    }
+
+    /// Requests the window close on its next frame. Safe to call whether
+    /// or not the window is currently open.
+    pub fn close(&self) {
+        self.closed.store(true, Ordering::SeqCst);
+        self.wake();
+    }
+
+    /// True once the window has closed, either via `.close()` or the user
+    /// clicking the OS close button.
+    pub fn is_closed(&self) -> bool {
+        self.closed.load(Ordering::SeqCst)
+    }
+
+    fn wake(&self) {
+        if let Some(ctx) = self.repaint_ctx.lock().unwrap().as_ref() {
+            ctx.request_repaint();
+        }
+    }
+}
+
+impl Default for ConsoleHandle {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Every console window's background thread, so [`wait_for_consoles`] can
+/// block on them after a script finishes running.
+fn console_threads() -> &'static Mutex<Vec<JoinHandle<()>>> {
+    static CONSOLE_THREADS: OnceLock<Mutex<Vec<JoinHandle<()>>>> = OnceLock::new();
+    CONSOLE_THREADS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+/// Opens a real, terminal-styled OS window for `spec` on a background
+/// thread and returns immediately — `handle` stays live and can keep
+/// receiving `.print_line()` calls for as long as the window is open.
+///
+/// **Known limitation:** `winit` (which `eframe` is built on) generally
+/// expects its event loop to run on the process's main thread. This
+/// works as-is on Windows and Linux, which is where FXterminal has been
+/// exercised so far. A strictly main-thread-safe version on macOS would
+/// need `flux-cli` to hand the console its main thread directly instead
+/// of spawning one here — tracked as a follow-up, same spirit as the
+/// image-loading and widget-callback gaps already noted in FXwindows.
+pub fn open_console(spec: ConsoleSpec, handle: ConsoleHandle) -> Result<(), String> {
+    let width = spec.width.max(240.0);
+    let height = spec.height.max(160.0);
+    let title = spec.title.clone();
+
+    let join_handle = std::thread::Builder::new()
+        .name("fxterminal-console".to_string())
+        .spawn(move || {
+            let options = eframe::NativeOptions {
+                viewport: egui::ViewportBuilder::default().with_inner_size([width, height]),
+                ..Default::default()
+            };
+
+            let _ = eframe::run_native(
+                &title,
+                options,
+                Box::new(move |creation_ctx| {
+                    *handle.repaint_ctx.lock().unwrap() = Some(creation_ctx.egui_ctx.clone());
+                    Ok(Box::new(ConsoleApp { handle }))
+                }),
+            );
+        })
+        .map_err(|e| e.to_string())?;
+
+    console_threads().lock().unwrap().push(join_handle);
+
+    Ok(())
+}
+
+/// Blocks until every FXterminal console opened so far has closed (via
+/// `.close()` or the user hitting the OS close button).
+///
+/// `.show()` is deliberately non-blocking so a script can keep calling
+/// `.print(...)` after it — but that means nothing otherwise keeps the
+/// process alive once the script's last statement runs. Without this,
+/// the whole process (and every open console with it) exits the instant
+/// the script finishes, often before the window has even finished
+/// opening. `flux-interpreter` calls this once, after a script's
+/// top-level statements are done, so any console left open stays open
+/// until it's actually closed.
+pub fn wait_for_consoles() {
+    let handles: Vec<_> = console_threads().lock().unwrap().drain(..).collect();
+    for handle in handles {
+        let _ = handle.join();
+    }
+}
+
+struct ConsoleApp {
+    handle: ConsoleHandle,
+}
+
+/// Blocks until every FXterminal console opened so far has closed (via
+/// `.close()` or the user hitting the OS close button).
+///
+/// `.show()` is deliberately non-blocking so a script can keep calling
+/// `.print(...)` after it — but that means nothing otherwise keeps the
+/// process alive once the script's last statement runs. Without this,
+/// the whole process (and every open console with it) exits the instant
+/// the script finishes, often before the window has even finished
+/// opening. `flux-interpreter` calls this once, after a script's
+/// top-level statements are done, so any console left open stays open
+/// until it's actually closed.
+impl eframe::App for ConsoleApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // The user clicking the OS close button surfaces here as a
+        // close-requested viewport event rather than a separate app-trait
+        // callback; mirror it onto the handle either way.
+        if ctx.input(|i| i.viewport().close_requested()) {
+            self.handle.closed.store(true, Ordering::SeqCst);
+        }
+        if self.handle.is_closed() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+
+        // Console output can arrive from another thread at any time, so
+        // keep repainting on a short timer as a fallback in addition to
+        // the explicit `wake()` nudge in `print_line`/`clear`.
+        ctx.request_repaint_after(std::time::Duration::from_millis(200));
+
+        let bg = egui::Color32::from_rgb(18, 18, 18);
+        let fg = egui::Color32::from_rgb(64, 220, 120);
+
+        egui::CentralPanel::default()
+            .frame(egui::Frame::none().fill(bg).inner_margin(egui::Margin::same(8.0)))
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical()
+                    .stick_to_bottom(true)
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        let lines = self.handle.lines.lock().unwrap();
+                        for line in lines.iter() {
+                            ui.label(egui::RichText::new(line).monospace().color(fg));
+                        }
+                    });
+            });
     }
 }

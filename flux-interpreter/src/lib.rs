@@ -672,10 +672,73 @@ impl Interpreter {
             "io" => Ok(self.builtin_io_module()),
             "sys" => Ok(self.builtin_sys_module()),
             m if m.eq_ignore_ascii_case("fxwindows") => Ok(self.builtin_fxwindows_module()),
-            other => Err(RuntimeError::Exception {
-                message: format!("module '{other}' not found"),
-            }),
+            m if m.eq_ignore_ascii_case("fxterminal") => Ok(self.builtin_fxterminal_module()),
+            other => self.load_installed_module(other),
         }
+    }
+
+    /// Fallback for `IMPORT <name>` when `<name>` isn't a built-in module:
+    /// loads a package installed via `fx install` (see the Phase 5 package
+    /// manager) from `flux_modules/<name>/`, relative to the current
+    /// working directory — the same place `fx install` copies it to.
+    ///
+    /// Packages follow the layout documented in
+    /// `documentation/LANGUAGE_SPEC.md` §7: a `flux.toml` plus a
+    /// `src/library.fx` entry point, by convention (same as `src/main.fx`
+    /// for a project). That file is parsed and executed once, in a fresh
+    /// environment that still has access to FLUX's built-in functions
+    /// (RANGE, LEN, etc.) but not to the importing script's variables.
+    /// Every name the file defines at its top level becomes an export —
+    /// same shape as a built-in module, so `IMPORT Name` and
+    /// `Name.thing()` behave identically whether `Name` ships with the
+    /// runtime or was installed as a package.
+    fn load_installed_module(&mut self, name: &str) -> FluxResult<Value> {
+        let package_dir = std::path::Path::new("flux_modules").join(name);
+
+        if !package_dir.join("flux.toml").is_file() {
+            return Err(RuntimeError::Exception {
+                message: format!(
+                    "module '{name}' not found (not a built-in module, and no package is \
+                     installed at '{}' — run `fx install {name}` first)",
+                    package_dir.display()
+                ),
+            });
+        }
+
+        let source_path = package_dir.join("src").join("library.fx");
+        let source = std::fs::read_to_string(&source_path).map_err(|e| RuntimeError::Exception {
+            message: format!(
+                "failed to read entry file '{}' for package '{name}': {e}",
+                source_path.display()
+            ),
+        })?;
+
+        let tokens = flux_lexer::lex(&source).map_err(|e| RuntimeError::Exception {
+            message: format!("error loading package '{name}': {e}"),
+        })?;
+        let program = flux_parser::parse(tokens).map_err(|e| RuntimeError::Exception {
+            message: format!("error loading package '{name}': {e}"),
+        })?;
+
+        // Fresh globals (built-ins only, no access to the importer's own
+        // variables) so the package runs in isolation.
+        let module_env = Rc::new(RefCell::new(Environment::with_parent(Rc::new(RefCell::new(
+            default_globals(),
+        )))));
+        let mut module_interpreter = Interpreter {
+            env: module_env.clone(),
+            return_value: None,
+        };
+        module_interpreter.execute_block(&program.statements)?;
+
+        let fields = module_env.borrow().values.clone();
+
+        Ok(Value::Object(ObjectValue {
+            class_name: "module".to_string(),
+            fields,
+            methods: HashMap::new(),
+            native_methods: HashMap::new(),
+        }))
     }
 
     fn get_module_export(&self, module: &Value, name: &str) -> FluxResult<Value> {
@@ -1009,6 +1072,156 @@ impl Interpreter {
         }
     }
 
+    /// FLUX's second standard-library module: FXterminal. Lets a script
+    /// open a real, terminal-styled console window and print lines into
+    /// it while the program keeps running — a `create_console(...)` call
+    /// returns a `Console` object; `.show()` opens the window and, unlike
+    /// `FXwindows.window.show()`, returns immediately instead of blocking,
+    /// so the `.print(...)` calls that follow keep feeding it new lines.
+    ///
+    /// With the `gui` feature disabled (or before `.show()` is called),
+    /// `.print(...)` still works — it just writes to stdout instead of a
+    /// window, prefixed with the console's title, same fallback spirit as
+    /// FXwindows' headless placeholder.
+    fn builtin_fxterminal_module(&self) -> Value {
+        let mut fields = HashMap::new();
+
+        fields.insert(
+            "create_console".to_string(),
+            Value::NativeFunction(NativeFunction {
+                name: "create_console".to_string(),
+                arity: Some(3),
+                func: Rc::new(|args| {
+                    let title = args[0].as_string()?;
+                    let width = args[1].as_integer()?;
+                    let height = args[2].as_integer()?;
+
+                    let mut console_fields = HashMap::new();
+                    console_fields.insert("title".to_string(), Value::String(title.clone()));
+                    console_fields.insert("width".to_string(), Value::Integer(width));
+                    console_fields.insert("height".to_string(), Value::Integer(height));
+
+                    #[cfg(feature = "gui")]
+                    let gui_handle = flux_gui::ConsoleHandle::default();
+
+                    let mut native_methods = HashMap::new();
+
+                    // show() — opens the window. Non-blocking, unlike
+                    // FXwindows: the script keeps running afterward.
+                    {
+                        #[cfg(feature = "gui")]
+                        let gui_handle = gui_handle.clone();
+                        let title = title.clone();
+                        native_methods.insert(
+                            "show".to_string(),
+                            NativeFunction {
+                                name: "show".to_string(),
+                                arity: Some(1),
+                                func: Rc::new(move |_args| {
+                                    #[cfg(feature = "gui")]
+                                    {
+                                        let spec = flux_gui::ConsoleSpec {
+                                            title: title.clone(),
+                                            width: width as f32,
+                                            height: height as f32,
+                                        };
+                                        flux_gui::open_console(spec, gui_handle.clone()).map_err(
+                                            |e| RuntimeError::Exception {
+                                                message: format!(
+                                                    "failed to open FXterminal console: {e}"
+                                                ),
+                                            },
+                                        )?;
+                                    }
+                                    #[cfg(not(feature = "gui"))]
+                                    {
+                                        println!(
+                                            "[FXterminal] console '{title}' opened ({width}x{height}) — built without the 'gui' feature, output below will print to stdout."
+                                        );
+                                    }
+                                    Ok(Value::None)
+                                }),
+                            },
+                        );
+                    }
+
+                    // print(text) — appends one line.
+                    {
+                        #[cfg(feature = "gui")]
+                        let gui_handle = gui_handle.clone();
+                        #[cfg(not(feature = "gui"))]
+                        let title = title.clone();
+                        native_methods.insert(
+                            "print".to_string(),
+                            NativeFunction {
+                                name: "print".to_string(),
+                                arity: Some(2),
+                                func: Rc::new(move |args| {
+                                    let text = args[1].to_string();
+                                    #[cfg(feature = "gui")]
+                                    gui_handle.print_line(text);
+                                    #[cfg(not(feature = "gui"))]
+                                    println!("[{title}] {text}");
+                                    Ok(Value::None)
+                                }),
+                            },
+                        );
+                    }
+
+                    // clear() — wipes everything printed so far.
+                    {
+                        #[cfg(feature = "gui")]
+                        let gui_handle = gui_handle.clone();
+                        native_methods.insert(
+                            "clear".to_string(),
+                            NativeFunction {
+                                name: "clear".to_string(),
+                                arity: Some(1),
+                                func: Rc::new(move |_args| {
+                                    #[cfg(feature = "gui")]
+                                    gui_handle.clear();
+                                    Ok(Value::None)
+                                }),
+                            },
+                        );
+                    }
+
+                    // close() — closes the window if it's open.
+                    {
+                        #[cfg(feature = "gui")]
+                        let gui_handle = gui_handle.clone();
+                        native_methods.insert(
+                            "close".to_string(),
+                            NativeFunction {
+                                name: "close".to_string(),
+                                arity: Some(1),
+                                func: Rc::new(move |_args| {
+                                    #[cfg(feature = "gui")]
+                                    gui_handle.close();
+                                    Ok(Value::None)
+                                }),
+                            },
+                        );
+                    }
+
+                    Ok(Value::Object(ObjectValue {
+                        class_name: "Console".to_string(),
+                        fields: console_fields,
+                        methods: HashMap::new(),
+                        native_methods,
+                    }))
+                }),
+            }),
+        );
+
+        Value::Object(ObjectValue {
+            class_name: "module".to_string(),
+            fields,
+            methods: HashMap::new(),
+            native_methods: HashMap::new(),
+        })
+    }
+
     #[cfg(feature = "gui")]
     fn get_f32(fields: &HashMap<String, Value>, key: &str, default: f32) -> f32 {
         match fields.get(key) {
@@ -1142,7 +1355,12 @@ pub fn interpret(source: &str) -> Result<Value, String> {
     let tokens = flux_lexer::lex(source).map_err(|e| e.to_string())?;
     let program = flux_parser::parse(tokens).map_err(|e| e.to_string())?;
     let mut interpreter = Interpreter::new();
-    interpreter.run(&program).map_err(|e| e.to_string())
+    let result = interpreter.run(&program).map_err(|e| e.to_string());
+
+    #[cfg(feature = "gui")]
+    flux_gui::wait_for_consoles();
+
+    result
 }
 
 #[cfg(test)]

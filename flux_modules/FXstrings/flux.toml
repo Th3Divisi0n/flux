@@ -1,0 +1,9 @@
+[project]
+name = "FXstrings"
+version = "0.1.0"
+description = "A FLUX project"
+authors = ["Developer"]
+flux_version = "1.0.0"
+
+[dependencies]
+FXstrings = "1.0.0"

@@ -276,6 +276,7 @@ Expressions produce values. Operator precedence (highest to lowest):
 | `io` | `read_file`, `write_file` |
 | `sys` | `version`, `platform` |
 | `FXwindows` | Windows, buttons, labels, and other UI widgets — see [`libraries/FXwindows/README.md`](../libraries/FXwindows/README.md) |
+| `FXterminal` | Terminal-styled console windows you can print into — see [`libraries/FXterminal/README.md`](../libraries/FXterminal/README.md) |
 
 Future modules: `graphics`, `net`, `db`
 
@@ -283,7 +284,9 @@ Future modules: `graphics`, `net`, `db`
 
 ## 7. Package Format
 
-FLUX packages use `flux.toml`:
+Implemented as of Phase 5 (see [`package_manager/README.md`](../package_manager/README.md)
+for the full `fx install`/`remove`/`update` workflow). FLUX packages use
+`flux.toml`:
 
 ```toml
 [project]
@@ -306,8 +309,12 @@ MyLibrary/
 └── README.md
 ```
 
-Install: `fx install MyLibrary`  
-Import: `IMPORT graphics`
+Install: `fx install MyLibrary`
+Import: `IMPORT MyLibrary`
+
+A working example: [`registry/FXstrings`](../registry/FXstrings) — install
+it with `fx install FXstrings` and see
+[`examples/package_manager_demo.fx`](../examples/package_manager_demo.fx).
 
 ---
 
